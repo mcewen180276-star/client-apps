@@ -22,9 +22,10 @@ details.exercise-card>summary{list-style:none;padding:16px;display:flex;align-it
 details.exercise-card>summary::-webkit-details-marker{display:none}details.exercise-card>summary::after{content:'+';font-size:1.5rem;color:var(--accent)}details.exercise-card[open]>summary::after{content:'−'}
 .exercise-body{padding:0 14px 14px}.exercise-summary{font-size:.85rem;font-weight:400;color:var(--ink);opacity:.8}.toolbar{display:flex;gap:8px;flex-wrap:wrap}.toolbar button{flex:1;min-width:140px}.subsection{padding:0}.subsection>summary{padding:15px;font-weight:700}.subsection-content{padding:0 15px 15px}.tiny{font-size:.82rem}.theme-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.theme-row select{max-width:190px}.print-only{display:none}
 @media print{body{background:white!important;color:black!important;max-width:none;padding:0;font-size:10pt}header,.no-print,#list,#records{display:none!important}.print-only{display:block!important}section{border:0;box-shadow:none;break-inside:avoid}.print-page{page-break-before:always}.print-day:not(:first-of-type){break-before:page}.print-exercise{break-inside:avoid;border-bottom:1px solid #ddd;padding:7px 0}.print-exercise h3{margin:0 0 4px}.print-exercise p{margin:3px 0}.print-table{width:100%;border-collapse:collapse}.print-table th,.print-table td{border:1px solid #aaa;padding:5px;text-align:left}.print-title{font-size:19pt}.print-day h2{font-size:15pt}}
+@media print{.workout-card-page{break-before:page;page-break-before:always}.workout-card-page:first-of-type{break-before:auto;page-break-before:auto}.workout-card-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9pt}.workout-card-table td,.workout-card-table th{border:1px solid #888;padding:8px;vertical-align:top}.workout-card-table th:first-child{width:35%}.workout-write{height:74px;line-height:1.5}.workout-card-page h2{margin-bottom:6px}}
 </style></head><body><header><h1>Training for <span id="client"></span></h1><p>Select a programme and record each set or cardio round.</p></header>
 <section class="no-print"><div class="theme-row"><label for="theme">Your colour theme</label><select id="theme"><option value="blue">Ocean blue</option><option value="forest">Forest green</option><option value="sunset">Sunset coral</option><option value="purple">Violet</option><option value="dark">Dark mode</option></select></div></section>
-<section class="no-print"><label>Programme<select id="p"></select></label><label>Workout day<select id="d"></select></label><div class="toolbar"><button id="printDetailed" type="button">Print detailed programme</button><button id="printCompact" type="button">Print compact programme</button></div><p class="muted tiny">Prints every day of the selected programme. Choose Save as PDF in your device's print dialogue if preferred.</p></section>
+<section class="no-print"><label>Programme<select id="p"></select></label><label>Workout day<select id="d"></select></label><div class="toolbar"><button id="printDetailed" type="button">Print detailed programme</button><button id="printCompact" type="button">Print workout card</button></div><p class="muted tiny">Prints every day of the selected programme. Choose Save as PDF in your device's print dialogue if preferred.</p></section>
 <section class="no-print subsection"><details><summary>App help and programme updates</summary><div class="subsection-content"><p>For a reliable home-screen shortcut, open the secure HTTPS link supplied by your instructor and choose Add to Home screen in your browser.</p><button id="checkUpdates" type="button">Check for programme updates</button><p id="updateStatus" class="muted">Your workout history stays on this device.</p></div></details></section>
 <div id="list" class="no-print"></div>
 <section class="no-print"><h3>Save your workout</h3><label><input type="checkbox" id="shareAfter" style="width:auto" checked> Offer to send workout to instructor after saving</label><div class="toolbar"><button id="save">Save workout record</button><button id="sendLatest">Send latest saved workout</button></div><p id="sendStatus" class="muted"></p></section>
@@ -62,12 +63,32 @@ $('theme').onchange=()=>setTheme($('theme').value);
 function buildPrint(mode){
  const p=data.programmes[+$('p').value];if(!p)return;
  const detailed=mode==='detailed';
- $('printArea').innerHTML='<h1 class="print-title">'+esc(p.name)+'</h1><p>Client: '+esc(data.clientName)+' · '+p.days.length+' workout days</p>'+p.days.map((d,di)=>'<div class="print-day"><h2>'+esc(d.name)+'</h2><p>'+esc(d.style||'Mixed')+'</p>'+d.exercises.map((e,i)=>'<div class="print-exercise"><h3>'+(i+1)+'. '+esc(e.name)+'</h3><p><b>'+esc(e.sets||1)+' '+(cardio(e)?'rounds':'sets')+'</b> · '+fields(e).filter(([k])=>e[k]!==undefined&&e[k]!=='').map(([k,l])=>esc(l)+': '+esc(e[k])).join(' · ')+'</p>'+(e.warmupEnabled&&!cardio(e)?'<p>Warm-up: '+esc(e.warmupSets||'1')+' × '+esc(e.warmupReps||'16–20')+' reps · '+esc(e.warmupWeight||'Light')+'</p>':'')+(detailed?'<p>'+esc(e.description||'')+'</p>'+(e.url?'<p>Demonstration: '+esc(e.url)+'</p>':''):'')+'</div>').join('')+'</div>').join('');
+ const head='<h1 class="print-title">'+esc(p.name)+'</h1><p>Client: '+esc(data.clientName)+' · '+p.days.length+' workout days</p>';
+ if(detailed){
+  $('printArea').innerHTML=head+p.days.map(d=>'<div class="print-day"><h2>'+esc(d.name)+'</h2><p>'+esc(d.style||'Mixed')+'</p>'+d.exercises.map((e,i)=>'<div class="print-exercise"><h3>'+(i+1)+'. '+esc(e.name)+'</h3><p><b>'+esc(e.sets||1)+' '+(cardio(e)?'rounds':'sets')+'</b> · '+fields(e).filter(([k])=>e[k]!==undefined&&e[k]!=='').map(([k,l])=>esc(l)+': '+esc(e[k])).join(' · ')+'</p>'+(e.warmupEnabled&&!cardio(e)?'<p>Warm-up: '+esc(e.warmupSets||'1')+' × '+esc(e.warmupReps||'16–20')+' reps · '+esc(e.warmupWeight||'Light')+'</p>':'')+'<p>'+esc(e.description||'')+'</p>'+(e.url?'<p>Demonstration: '+esc(e.url)+'</p>':'')+'</div>').join('')+'</div>').join('');
+ }else{
+  const weeks=Number(prompt('How many weeks for the workout card? (1–52)','6'));
+  if(!Number.isInteger(weeks)||weeks<1||weeks>52)return;
+  const perSheet=Number(prompt('How many weeks on each sheet? (1–4)','2'));
+  if(!Number.isInteger(perSheet)||perSheet<1||perSheet>4)return;
+  let pages=[];
+  for(const d of p.days){
+   for(let from=1;from<=weeks;from+=perSheet){
+    const end=Math.min(weeks,from+perSheet-1),weekLabels=Array.from({length:end-from+1},(_,i)=>'Week '+(from+i));
+    const rows=d.exercises.map((e,i)=>{
+     const target=esc(e.sets||1)+' '+(cardio(e)?'rounds':'sets')+' · '+fields(e).filter(([k])=>e[k]!==undefined&&e[k]!=='').map(([k,l])=>esc(l)+': '+esc(e[k])).join(' · ');
+     return '<tr><td><b>'+(i+1)+'. '+esc(e.name)+'</b><div>'+target+'</div></td>'+weekLabels.map(()=>'<td class="workout-write">Date: __________<br>Results:<br>________________<br>________________<br>Notes: __________</td>').join('')+'</tr>';
+    }).join('');
+    pages.push('<div class="print-day workout-card-page"><h2>'+esc(d.name)+' · Weeks '+from+'–'+end+'</h2><p>Programme: '+esc(p.name)+' · Client: '+esc(data.clientName)+'</p><table class="print-table workout-card-table"><thead><tr><th>Exercise / target</th>'+weekLabels.map(w=>'<th>'+w+'</th>').join('')+'</tr></thead><tbody>'+rows+'</tbody></table></div>');
+   }
+  }
+  $('printArea').innerHTML='<h1 class="print-title">Workout record card</h1>'+pages.join('');
+ }
  document.body.dataset.printMode=mode;
  window.print();
 }
 $('printDetailed').onclick=()=>buildPrint('detailed');
-$('printCompact').onclick=()=>buildPrint('compact');
+$('printCompact').onclick=()=>buildPrint('record');
 $('p').onchange=days;$('d').onchange=render;
 $('save').onclick=()=>{const p=data.programmes[+$('p').value],d=p.days[+$('d').value],items=d.exercises.map((e,i)=>({name:e.name,sets:Array.from({length:Math.max(1,Math.min(30,numberOfSets(e.sets)))},(_,si)=>Object.fromEntries([...fields(e).map(([k])=>k),'notes'].map(k=>[k,document.querySelector('[data-i="'+i+'"][data-s="'+si+'"][data-f="'+k+'"]')?.value||''])))}));const rs=getRecords();rs.push({date:new Date().toISOString(),programme:p.name,programmeId:p.id,day:d.name,items});try{localStorage.setItem(storeKey,JSON.stringify(rs));records();$('sendStatus').textContent='Workout saved on this device.';if($('shareAfter').checked)sendLatest()}catch(e){alert('Could not save: '+e.message)}};
 $('export').onclick=()=>{const blob=new Blob([JSON.stringify({clientName:data.clientName,records:getRecords()},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='workout-records.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
